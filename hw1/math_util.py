@@ -10,7 +10,7 @@ class Matrix():
 
         # Initialize a 0 matrix if matrix is not given
 
-        self.matrix = [[0 for _ in range(row)] for _ in range(col)] if matrix is None else matrix
+        self.matrix = [[0 for _ in range(col)] for _ in range(row)] if matrix is None else matrix
         self.row = len(self.matrix)
         self.col = len(self.matrix[0])
 
@@ -25,10 +25,18 @@ class Matrix():
     def transpose(self):
         return Matrix([[self.matrix[r][c] for r in range(self.row)] for c in range(self.col)])
 
+    
+    def __sub__(self, B):
+        assert isinstance(B, Matrix)
+        assert (self.col == B.col and self.row == B.row)
+        B = B.scalar_mul(-1)
+        return self + B
+
     # Matrix addition
     def __add__(self, B):
         assert isinstance(B, Matrix)
-        assert self.col == B.col and self.row == B.row
+        assert (self.col == B.col and self.row == B.row)
+
 
         res = Matrix(row=self.row, col=self.col)
         for i in range(self.row):

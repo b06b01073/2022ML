@@ -80,6 +80,13 @@ def test_Initialize_A():
     assert A == res_A
     assert B == res_B
 
+def test_sub_add():
+    A = Matrix([[1, 2], [3, 4]])
+    B = Matrix([[1, 2], [3, 4]])
+
+    assert A + B == Matrix([[2, 4], [6, 8]])
+    assert A - B == Matrix([[0, 0], [0, 0]])
+
 if __name__ == '__main__':
     test_equality()
     test_multiplication()
@@ -88,5 +95,6 @@ if __name__ == '__main__':
     test_inverse()
     test_scalar_mul()
     test_Initialize_A()
+    test_sub_add()
 
     print("OK")
