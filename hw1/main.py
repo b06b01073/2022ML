@@ -76,7 +76,7 @@ def LSE(n, lam, data_points):
     plot(n, X, data_points, "LSE")
 
     
-def Newton(n, data_points, episilon=1e-10):
+def Newton(n, data_points, episilon=1e-10, max_iter=1e4):
     A = initialize_A(n, data_points)
     A_trans = A.transpose()
 
@@ -88,6 +88,9 @@ def Newton(n, data_points, episilon=1e-10):
     
     # assume that hessian always exist 
     hessian = A_trans.mul(A).scalar_mul(2)
+
+    # 每次loop都要計算gradient過於耗時，設定一個max_iter，超過max_iter直接中止 
+    iter = 0
 
     while True:
         X_new = X - hessian.inverse().mul(gradient)
@@ -101,9 +104,12 @@ def Newton(n, data_points, episilon=1e-10):
         gradient = A_trans.mul(A).scalar_mul(2).mul(X) - A_trans.mul(b).scalar_mul(2)
         hessian = A_trans.mul(A).scalar_mul(2)
 
-        if max_diff < episilon or gradient == zero_grad:
+        if max_diff < episilon or gradient == zero_grad or iter > max_iter:
             break
+
         
+        iter += 1
+
     print("\nNewton's Method:")
 
     print("Fitting line: ", end='')
