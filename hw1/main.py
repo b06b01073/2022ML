@@ -1,4 +1,6 @@
+from copy import deepcopy
 from math_util import Coordinate, Matrix
+import matplotlib.pyplot as plt
 
 file_path = "testfile.txt"
 
@@ -10,7 +12,30 @@ def read_data(data_points):
             c = Coordinate(x, y)
             data_points.append(c)
     
-            
+
+def plot(n, X, data_points, file_name):
+    data_x = [c.x for c in data_points]
+    data_y = [c.y for c in data_points]
+
+    predict_x = deepcopy(data_x)
+    predict_y = []
+
+    for x in predict_x:
+        y = 0
+        for i in reversed(range(n)):
+            y += X.matrix[i][0] * pow(x, i)
+        predict_y.append(y)
+
+
+
+    plt.scatter(data_x, data_y) 
+    plt.plot(predict_x, predict_y)
+    plt.title(file_name)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.savefig(file_name)     
+    plt.clf()
 
 def initialize_A(n, data_points):
     row = len(data_points)
@@ -48,6 +73,7 @@ def LSE(n, lam, data_points):
 
     print(f'\nTotal Error: {get_LSE_error(n, X, data_points)}')
 
+    plot(n, X, data_points, "LSE")
 
     
 def Newton(n, data_points, episilon=1e-10):
@@ -85,6 +111,8 @@ def Newton(n, data_points, episilon=1e-10):
         print(f'{X.matrix[i][0]}X^{i}' + (' + ' if i != 0 else ''), end='')
 
     print(f'\nTotal Error: {get_LSE_error(n, X, data_points)}')
+
+    plot(n, X, data_points, "Newton's Method")
 
 
 def main():
