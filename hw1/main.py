@@ -1,11 +1,12 @@
 from copy import deepcopy
 from math_util import Coordinate, Matrix
 import matplotlib.pyplot as plt
+import os
 
-file_path = "testfile.txt"
 
-def read_data(data_points):
-    with open(file_path, 'r') as f:
+
+def read_data(data_points, test_file_path):
+    with open(test_file_path, 'r') as f:
         for line in f.readlines():
             x = float(line.split(',')[0])
             y = float(line.split(',')[1])
@@ -13,7 +14,9 @@ def read_data(data_points):
             data_points.append(c)
     
 
-def plot(n, X, data_points, file_name):
+def plot(n, X, data_points, file_path):
+
+    file_name = file_path.split('\\')[-1]
     data_x = [c.x for c in data_points]
     data_y = [c.y for c in data_points]
 
@@ -34,7 +37,7 @@ def plot(n, X, data_points, file_name):
     plt.xlabel('x')
     plt.ylabel('y')
 
-    plt.savefig(file_name)     
+    plt.savefig(file_path)     
     plt.clf()
 
 def initialize_A(n, data_points):
@@ -57,7 +60,7 @@ def get_LSE_error(n, X, data_points):
 
     return error
 
-def LSE(n, lam, data_points):
+def LSE(n, lam, data_points, LSE_file_path):
     A = initialize_A(n, data_points)
     A_trans = A.transpose()
     I = Matrix(row=A.col, col=A.col, identity=True)
@@ -73,10 +76,10 @@ def LSE(n, lam, data_points):
 
     print(f'\nTotal Error: {get_LSE_error(n, X, data_points)}')
 
-    plot(n, X, data_points, "LSE")
+    plot(n, X, data_points, LSE_file_path)
 
     
-def Newton(n, data_points, episilon=1e-10, max_iter=1e4):
+def Newton(n, data_points, Newton_file_path, episilon=1e-10, max_iter=1e4):
     A = initialize_A(n, data_points)
     A_trans = A.transpose()
 
@@ -118,21 +121,28 @@ def Newton(n, data_points, episilon=1e-10, max_iter=1e4):
 
     print(f'\nTotal Error: {get_LSE_error(n, X, data_points)}')
 
-    plot(n, X, data_points, "Newton's Method")
+    plot(n, X, data_points, Newton_file_path)
 
 
-def main():
+def main(test_file_path, LSE_file_path, Newton_file_path):
+
     n = int(input('Enter the number of bases: '))
     lam = float(input('Enter Lambda: '))
     
     data_points = []
-    read_data(data_points)
+    read_data(data_points, test_file_path)
     
-    LSE(n, lam, data_points)
-    Newton(n, data_points)
+    LSE(n, lam, data_points, LSE_file_path)
+    Newton(n, data_points, Newton_file_path)
     
 
 
 
 if __name__ == '__main__':
-    main()
+    file_path = os.path.abspath(__file__)  
+    dir_path = os.path.dirname(file_path)  
+    test_file_path = os.path.join(dir_path, 'testfile.txt')
+    LSE_file_path = os.path.join(dir_path, 'LSE')
+    Newton_file_path = os.path.join(dir_path, 'Newton')
+
+    main(test_file_path, LSE_file_path, Newton_file_path)
