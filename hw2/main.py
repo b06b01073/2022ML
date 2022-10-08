@@ -111,33 +111,6 @@ def get_ln_prob(data_bin: list, p: int, number_bin: list, label_freq: list):
 
     return ln_prior + ln_likelihood
 
-def get_log_prob(data_bins:list, prediction: int, bins: list, numbers: list, freq: list):
-    assert(sum(numbers[prediction]) == freq[prediction] * PIXELS)
-    assert(sum(data_bins) == PIXELS)
-    # size of sample space of bins
-    s = PIXELS * TRAIN_DATA_SIZE
-
-
-    # size of sample space given prediction of bins
-    restricted_s = sum(numbers[prediction])
-
-    # math.log use natural log as default
-    prior_ln = math.log(freq[prediction]) - math.log(TRAIN_DATA_SIZE)
-    likelihood_ln = 0
-    denominator_ln = 0
-
-
-    for i in range(BINS_COUNT):
-        bin_count = data_bins[i]
-        if bin_count == 0:
-            bin_count = PSEUDO_COUNT
-        
-        likelihood_ln += bin_count * (math.log(numbers[prediction][i]) - math.log(restricted_s))
-        denominator_ln += bin_count * (math.log(bins[i]) - math.log(s))
-
-
-    return prior_ln + likelihood_ln - denominator_ln, prior_ln, likelihood_ln, denominator_ln 
-            
 
 # ref: https://stackoverflow.com/questions/12417498/how-to-release-used-memory-immediately-in-python-list
 def release_list(ls):
