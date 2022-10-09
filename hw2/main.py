@@ -1,3 +1,4 @@
+from tkinter.tix import ROW
 from class_util import NumberBin
 import math
 from tqdm import tqdm
@@ -9,7 +10,6 @@ TRAIN_DATA_OFFSET = 16
 
 # label starts from the 9th byte of label file
 LABEL_DATA_OFFSET = 8
-second_min = float('inf')
 
 # the metadata of an image
 PIXELS = 28 * 28
@@ -216,15 +216,17 @@ def discrete_classifier():
 
     extract_feature_by_position(train_data, train_labels, number_bins, bins, label_freq)
 
-    train_error_rate = get_error_rate(train_data, train_labels, number_bins, label_freq, TRAIN_DATA_SIZE)
+    # train_error_rate = get_error_rate(train_data, train_labels, number_bins, label_freq, TRAIN_DATA_SIZE)
 
 
-    test_data, test_labels = get_test_dataset()
+    # test_data, test_labels = get_test_dataset()
 
     
-    test_error_rate = get_error_rate(test_data, test_labels, number_bins, label_freq,TEST_DATA_SIZE)
+    # test_error_rate = get_error_rate(test_data, test_labels, number_bins, label_freq,TEST_DATA_SIZE)
 
-    print(f'Train Error Rate: {train_error_rate}, Test Error Rate: {test_error_rate}')
+    plot_imagination(number_bins, label_freq)
+
+    # print(test_error_rate)
 
 @trace 
 def get_error_rate(data: list, labels: list, number_bins: list, label_freq: list, dataset_size: int):
@@ -308,7 +310,26 @@ def read_data(file_path: str, type: str, items: int):
     return data
 
 
+@trace 
+def plot_imagination(number_bins: list, label_freq: list, threshold_category=16):
+    # pixel 129 starts from the 16th bin
 
+    images = [[[0 for _ in range(COLS)] for _ in range(ROWS)] for _ in range(DIGITS)]
+
+    for l in range(DIGITS):
+        for pixel in range(PIXELS):
+            score = 0
+            for category in range(threshold_category, BINS_COUNT):
+                score += number_bins[l].pixel_bins[pixel][category]
+            if score * 2.5 >= label_freq[l]:
+                r = pixel // ROWS
+                c = pixel % COLS
+                images[l][r][c] = 1
+
+    
+@trace 
+def cont_plot_imagination():
+    pass
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
