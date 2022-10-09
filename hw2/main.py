@@ -1,16 +1,15 @@
-import sys
 from class_util import NumberBin
 import math
 from tqdm import tqdm
 import argparse
 import random
 
-
 # image starts from the 17th byte of image file
 TRAIN_DATA_OFFSET = 16 
 
 # label starts from the 9th byte of label file
 LABEL_DATA_OFFSET = 8
+second_min = float('inf')
 
 # the metadata of an image
 PIXELS = 28 * 28
@@ -21,7 +20,7 @@ DIGITS = 10
 
 # number of items
 TRAIN_DATA_SIZE = 60000
-TEST_DATA_SIZE = 1000
+TEST_DATA_SIZE = 10000
 
 # file path
 TRAIN_IMAGES_PATH = './train-images-idx3-ubyte/train-images.idx3-ubyte'
@@ -78,14 +77,13 @@ def cont_classifier():
 
     # train_error_rate = get_cont_error_rate(train_data, train_labels, digit_MLE_params, label_freq, TRAIN_DATA_SIZE)
 
+
     test_data, test_labels = get_test_dataset()
     test_error_rate = get_cont_error_rate(test_data, test_labels, digit_MLE_params, label_freq, TEST_DATA_SIZE)
 
     print(test_error_rate)
 
-    # print(f'Training Error Rate: {train_error_rate}, Testing, Error Rate: {test_error_rate}')
 
-    # test_data, test_labels = get_test_dataset()
 
 @trace 
 def get_cont_error_rate(data: list, labels: list, digit_MLE_params: list, label_freq: list, dataset_size: int) -> int:
@@ -154,6 +152,7 @@ def get_MLE_params(train_pixel_distribution, digit_pixel_distribution):
     
     return data_MLE_params, digit_MLE_params
 
+
 # return the mean and standard deviation of the MLE
 def get_params(distribution):
     # should use the pixel value as x, instead of count
@@ -164,11 +163,9 @@ def get_params(distribution):
     return mean, std
 
 @trace
-def extract_cont_feature_by_position(train_data: list, train_labels: list, episilon=1):
+def extract_cont_feature_by_position(train_data: list, train_labels: list, episilon=0.85):
     label_freq = [0 for _ in range(DIGITS)]
 
-    # (pixels, MAX_PIXEL_VALUE)
-    train_pseudo_checker = [[False for _ in range(MAX_PIXEL_VALUE + 1)] for _ in range(PIXELS)]
 
     # (digits, pixels, MAX_PIXEL_VALUE)
     digit_pseudo_checker = [[[False for _ in range(MAX_PIXEL_VALUE + 1)] for _ in range(PIXELS)] for _ in range(DIGITS)]
@@ -186,7 +183,6 @@ def extract_cont_feature_by_position(train_data: list, train_labels: list, episi
         for j in range(PIXELS):
             pixel_value = d[j]
 
-            train_pseudo_checker[j][pixel_value] = True
             digit_pseudo_checker[l][j][pixel_value] = True
 
             train_pixel_distribution[j].append(pixel_value)
@@ -195,14 +191,8 @@ def extract_cont_feature_by_position(train_data: list, train_labels: list, episi
     # randomly adding noise to avoid 0 standard deviation 
     for i in tqdm(range(PIXELS), desc="Adding pseudocount"):
         for pixel_value in range(MAX_PIXEL_VALUE + 1):
-
-            # if a pixel_value hasn't appeared in the ith pixel before, there is a probability of episilon, that pixel_value is added to the ith pixel as a noise
-            r = random.uniform(0, 1)
-            if not train_pseudo_checker[i][pixel_value] and r < episilon:
-                train_pixel_distribution[i].append(pixel_value)
-
             for digit in range(DIGITS):
-                if not digit_pseudo_checker[digit][i][pixel_value] and r < episilon:
+                if not digit_pseudo_checker[digit][i][pixel_value]:
                     digit_pixel_distribution[digit][i].append(pixel_value)
 
 
@@ -239,7 +229,7 @@ def discrete_classifier():
 @trace 
 def get_error_rate(data: list, labels: list, number_bins: list, label_freq: list, dataset_size: int):
     error_count = 0
-    for i in tqdm(range(dataset_size)):
+    for i in tqdm(range(dataset_size), "Calculating error rate"):
         d = data[i]
         l = labels[i]
         data_bin = [x // BINS_SIZE for x in d]
