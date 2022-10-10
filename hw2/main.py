@@ -1,9 +1,7 @@
-from tkinter.tix import ROW
 from class_util import NumberBin
 import math
 from tqdm import tqdm
 import argparse
-import random
 
 # image starts from the 17th byte of image file
 TRAIN_DATA_OFFSET = 16 
@@ -75,19 +73,27 @@ def cont_classifier():
     # print(digit_MLE_params[0])
 
 
-    # train_error_rate = get_cont_error_rate(train_data, train_labels, digit_MLE_params, label_freq, TRAIN_DATA_SIZE)
+    # train_error_rate, total_scores, predictions = get_cont_error_rate(train_data, train_labels, digit_MLE_params, label_freq, TRAIN_DATA_SIZE)
 
 
     test_data, test_labels = get_test_dataset()
-    test_error_rate = get_cont_error_rate(test_data, test_labels, digit_MLE_params, label_freq, TEST_DATA_SIZE)
 
-    print(test_error_rate)
+    test_error_rate, total_scores, predictions = get_cont_error_rate(test_data, test_labels, digit_MLE_params, label_freq, TEST_DATA_SIZE)
 
+    images = cont_plot_imagination(digit_MLE_params, label_freq)
+
+    write_result(images, test_error_rate, total_scores, predictions, 1, TEST_DATA_SIZE)
 
 
 @trace 
-def get_cont_error_rate(data: list, labels: list, digit_MLE_params: list, label_freq: list, dataset_size: int) -> int:
+def get_cont_error_rate(data: list, labels: list, digit_MLE_params: list, label_freq: list, dataset_size: int):
     error_count = 0
+
+    # (dataset_size, digits)
+    total_scores = []
+
+    # (dataset_size, 2(prediction, label))
+    predictions = []
 
     for i in tqdm(range(dataset_size), "Calculating Error Rate"):
         d = data[i]
@@ -95,6 +101,8 @@ def get_cont_error_rate(data: list, labels: list, digit_MLE_params: list, label_
 
         pred = 0
         cur_max = float('-inf')
+        
+        scores = []
 
         for p in range(DIGITS):
             prob_in_ln = get_cont_ln_prob(d, digit_MLE_params, label_freq, p)
@@ -103,11 +111,19 @@ def get_cont_error_rate(data: list, labels: list, digit_MLE_params: list, label_
                 cur_max = prob_in_ln
                 pred = p
 
+            scores.append(-prob_in_ln)
+
         if pred != l:
             error_count += 1
 
+        s = sum(scores)
+        for i in range(DIGITS):
+            scores[i] /= s
+        total_scores.append(scores)
 
-    return error_count / dataset_size
+        predictions.append([pred, l])
+
+    return error_count / dataset_size, total_scores, predictions
 
 
 def get_cont_ln_prob(data: list, digit_MLE_params: list, label_freq: list, p: int):
@@ -219,22 +235,29 @@ def discrete_classifier():
     # train_error_rate = get_error_rate(train_data, train_labels, number_bins, label_freq, TRAIN_DATA_SIZE)
 
 
-    # test_data, test_labels = get_test_dataset()
-
+    test_data, test_labels = get_test_dataset()
     
-    # test_error_rate = get_error_rate(test_data, test_labels, number_bins, label_freq,TEST_DATA_SIZE)
+    test_error_rate, total_scores, predictions = get_error_rate(test_data, test_labels, number_bins, label_freq,TEST_DATA_SIZE)
 
-    plot_imagination(number_bins, label_freq)
+    images = plot_imagination(number_bins, label_freq)
 
+    write_result(images, test_error_rate, total_scores, predictions, 0, TEST_DATA_SIZE)
     # print(test_error_rate)
 
 @trace 
 def get_error_rate(data: list, labels: list, number_bins: list, label_freq: list, dataset_size: int):
     error_count = 0
+    total_scores = []
+    predictions = []
+    
+
+
     for i in tqdm(range(dataset_size), "Calculating error rate"):
         d = data[i]
         l = labels[i]
         data_bin = [x // BINS_SIZE for x in d]
+
+        scores = []
 
         pred = 0
         cur_max = float('-inf')
@@ -243,10 +266,19 @@ def get_error_rate(data: list, labels: list, number_bins: list, label_freq: list
             if prob_in_ln > cur_max:
                 cur_max = prob_in_ln
                 pred = p
+            scores.append(-prob_in_ln)
 
         if l != pred:
             error_count += 1
-    return error_count / dataset_size
+
+        s = sum(scores)
+        for i in range(DIGITS):
+            scores[i] /= s
+
+        predictions.append([pred, l])
+        total_scores.append(scores)
+
+    return error_count / dataset_size, total_scores, predictions
 
 
 def get_ln_prob(data_bin: list, p: int, number_bin: list, label_freq: list):
@@ -316,7 +348,7 @@ def plot_imagination(number_bins: list, label_freq: list, threshold_category=16)
 
     images = [[[0 for _ in range(COLS)] for _ in range(ROWS)] for _ in range(DIGITS)]
 
-    for l in range(DIGITS):
+    for l in tqdm(range(DIGITS), desc="Plotting imagination number"):
         for pixel in range(PIXELS):
             score = 0
             for category in range(threshold_category, BINS_COUNT):
@@ -326,10 +358,49 @@ def plot_imagination(number_bins: list, label_freq: list, threshold_category=16)
                 c = pixel % COLS
                 images[l][r][c] = 1
 
+    return images
     
+
 @trace 
-def cont_plot_imagination():
-    pass
+def cont_plot_imagination(digit_MLE_params: list, label_freq: list, threshold=128):
+    # plot 1 if mean >= threshold else 0
+    images = [[[0 for _ in range(COLS)] for _ in range(ROWS)] for _ in range(DIGITS)]
+
+    for l in tqdm(range(DIGITS), desc="Plotting imagination number"):
+        for pixel in range(PIXELS):
+            mean = digit_MLE_params[l][pixel][0]
+            if mean >= threshold * 0.85:
+                r = pixel // ROWS
+                c = pixel % COLS
+                images[l][r][c] = 1
+
+    return images
+
+
+@trace
+def write_result(images, error_rate, total_scores, predictions, mode, dataset_size):
+    file_path = "./cont_result.txt" if mode == 1 else "./result.txt"
+
+    with open(file_path, 'w') as f:
+        for i in tqdm(range(dataset_size), desc='Writing ln(prob)'):
+            f.write('Posterior (in log scale):\n')
+            for d in range(DIGITS):
+                f.write(f'{d}: {total_scores[i][d]}\n')
+            f.write(f'Prediction: {predictions[i][0]}, Ans: {predictions[i][1]}\n\n')
+            
+        f.write('Imagination of numbers in Bayesian classifier:\n\n')
+
+        for i in tqdm(range(DIGITS), desc='Plotting image'):
+            f.write(f'{i}: \n')
+            for r in range(ROWS):
+                for c in range(COLS):
+                    f.write(f'{images[i][r][c]} ')
+                f.write('\n')
+
+            f.write('\n')
+
+
+        f.write(f'Error rate: {error_rate}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -338,6 +409,5 @@ if __name__ == '__main__':
     
     # 0 for discrete mode, 1 for continuous mode
     mode = args.mode
-    random.seed(777)
 
     main(mode)
